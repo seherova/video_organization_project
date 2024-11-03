@@ -1,11 +1,13 @@
 import os
 import json
+import hashlib
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import messagebox, ttk
 
 # Directory where videos are located
 VIDEO_DIRECTORY = "/Users/seherova/Downloads/VIDEO_DIRECTORY"
 DATABASE_FILE = "database_file.json"
+
 
 def load_database():
     if os.path.exists(DATABASE_FILE):
@@ -14,9 +16,11 @@ def load_database():
     else:
         return {}
 
+
 def save_database(database):
     with open(DATABASE_FILE, "w") as file:
         json.dump(database, file, indent=4)
+
 
 def get_video_files():
     if not os.path.exists(VIDEO_DIRECTORY):
@@ -24,15 +28,18 @@ def get_video_files():
         return []
     return [f for f in os.listdir(VIDEO_DIRECTORY) if f.endswith((".mp4", ".avi", ".mov"))]
 
+
 def search_videos_by_tag(tag):
     database = load_database()
     result = [video for video, tags in database.items() if tag in tags]
     return result
 
+
 def get_videos_by_tags(tags):
     database = load_database()
     result = [video for video, video_tags in database.items() if any(tag in video_tags for tag in tags)]
     return result
+
 
 def show_video_tags(video_name):
     database = load_database()
@@ -40,6 +47,22 @@ def show_video_tags(video_name):
         return database[video_name]
     else:
         return None
+
+
+def hash_video_size(video_path):
+    """Verilen videonun boyutunu hash'le ve çıktı olarak döndür."""
+    size = os.path.getsize(video_path)  # Dosyanın boyutunu al
+    return hashlib.sha256(str(size).encode()).hexdigest()  # Hash'le
+
+
+def rename_video_with_hash(video_name):
+    """Video adını hash değerine göre değiştir."""
+    video_path = os.path.join(VIDEO_DIRECTORY, video_name)
+    hash_name = hash_video_size(video_path) + os.path.splitext(video_name)[1]  # Uzantıyı koru
+    new_path = os.path.join(VIDEO_DIRECTORY, hash_name)
+    os.rename(video_path, new_path)  # Dosyayı yeniden adlandır
+    return hash_name
+
 
 def add_tags_to_video(video_name, new_tags):
     database = load_database()
@@ -52,11 +75,22 @@ def add_tags_to_video(video_name, new_tags):
         if tag not in current_tags:
             current_tags.append(tag)
 
+    # Videoyu hash ile yeniden adlandır
+    new_video_name = rename_video_with_hash(video_name)
+
+    # Veritabanında eski adı yeni adla güncelle
+    database[new_video_name] = database.pop(video_name)
+
     save_database(database)
-    messagebox.showinfo("Success", f"Tags {new_tags} added to {video_name}.")
+    messagebox.showinfo("Success", f"Tags {new_tags} added to {new_video_name}.")
+
+def remove_tag_from_database(video_name, tag):
+    database = load_database()
+
 
 def is_video_in_directory(video_name):
     return video_name in get_video_files()
+
 
 def search_videos():
     search_window = tk.Toplevel(root)
@@ -83,6 +117,7 @@ def search_videos():
 
     search_button = tk.Button(search_window, text="Search", command=perform_search)
     search_button.pack(pady=10)
+
 
 def show_tags():
     tags_window = tk.Toplevel(root)
@@ -113,6 +148,7 @@ def show_tags():
 
     show_button = tk.Button(tags_window, text="Show Tags", command=display_tags)
     show_button.pack(pady=10)
+
 
 def add_tags():
     add_window = tk.Toplevel(root)
@@ -148,6 +184,7 @@ def add_tags():
     add_button = tk.Button(add_window, text="Add Tags", command=perform_add_tags)
     add_button.pack(pady=10)
 
+
 def main():
     global root
     root = tk.Tk()
@@ -170,6 +207,7 @@ def main():
     exit_button.pack(pady=10)
 
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
