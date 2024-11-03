@@ -1,5 +1,7 @@
 import os
 import json
+import tkinter as tk
+from tkinter import messagebox, simpledialog, ttk
 
 # Directory where videos are located
 VIDEO_DIRECTORY = "/Users/seherova/Downloads/VIDEO_DIRECTORY"
@@ -11,14 +13,14 @@ def load_database():
             return json.load(file)
     else:
         return {}
- 
+
 def save_database(database):
     with open(DATABASE_FILE, "w") as file:
         json.dump(database, file, indent=4)
 
 def get_video_files():
     if not os.path.exists(VIDEO_DIRECTORY):
-        print(f"Error: {VIDEO_DIRECTORY} directory not found.")
+        messagebox.showerror("Error", f"{VIDEO_DIRECTORY} directory not found.")
         return []
     return [f for f in os.listdir(VIDEO_DIRECTORY) if f.endswith((".mp4", ".avi", ".mov"))]
 
@@ -42,63 +44,132 @@ def show_video_tags(video_name):
 def add_tags_to_video(video_name, new_tags):
     database = load_database()
 
-    # Initialize with an empty list of tags if the video is not yet in the database
     if video_name not in database:
         database[video_name] = []
 
-    # Add new tags to the existing tags
     current_tags = database[video_name]
     for tag in new_tags:
         if tag not in current_tags:
             current_tags.append(tag)
 
-    # Save the updated database
     save_database(database)
-    print(f"Tags {new_tags} added to {video_name}.")
+    messagebox.showinfo("Success", f"Tags {new_tags} added to {video_name}.")
 
 def is_video_in_directory(video_name):
-    # Check if the video exists in VIDEO_DIRECTORY
     return video_name in get_video_files()
 
-def main():
-    while True:
-        choice = input("1. Search video by tag\n2. Show video's tags\n3. Add tag to video\n4. Exit\nMake your selection: ")
+def search_videos():
+    search_window = tk.Toplevel(root)
+    search_window.title("Search Videos by Tags")
+    search_window.geometry("400x200")
 
-        if choice == "1":
-            user_input = input("Enter the tag(s) you want to search for, separated by commas (e.g., rocket, F16, Akıncı): ")
+    tag_label = tk.Label(search_window, text="Enter tags to search (comma separated):")
+    tag_label.pack(pady=5)
+
+    tag_entry = tk.Entry(search_window, width=50)
+    tag_entry.pack(pady=5)
+
+    def perform_search():
+        user_input = tag_entry.get()
+        if user_input:
             tags_to_search = [tag.strip() for tag in user_input.split(",")]
             videos_found = get_videos_by_tags(tags_to_search)
-
             if videos_found:
-                print(f"Videos with {tags_to_search} tag(s): {videos_found}")
+                result_text = "\n".join(videos_found)
+                messagebox.showinfo("Videos Found", f"Videos with {tags_to_search}:\n{result_text}")
             else:
-                print(f"No videos found with {tags_to_search} tag(s).")
+                messagebox.showinfo("No Videos Found", "No matching videos found.")
+        search_window.destroy()
 
-        elif choice == "2":
-            video_name = input("Enter the name of the video to view its tags (e.g., video1.mp4): ")
-            tags = show_video_tags(video_name)
+    search_button = tk.Button(search_window, text="Search", command=perform_search)
+    search_button.pack(pady=10)
+
+def show_tags():
+    tags_window = tk.Toplevel(root)
+    tags_window.title("Show Video Tags")
+    tags_window.geometry("400x200")
+
+    video_list = get_video_files()
+    if not video_list:
+        messagebox.showinfo("No Videos", "No videos found in the directory.")
+        tags_window.destroy()
+        return
+
+    video_name_label = tk.Label(tags_window, text="Select a video to view tags:")
+    video_name_label.pack(pady=5)
+
+    video_combobox = ttk.Combobox(tags_window, values=video_list, width=40)
+    video_combobox.pack(pady=5)
+
+    def display_tags():
+        selected_video = video_combobox.get()
+        if selected_video:
+            tags = show_video_tags(selected_video)
             if tags is not None:
-                print(f"Tags for {video_name}: {tags}")
+                messagebox.showinfo("Video Tags", f"Tags for {selected_video}:\n{tags}")
             else:
-                print(f"{video_name} not found.")
+                messagebox.showinfo("Not Found", "No tags found for the selected video.")
+        tags_window.destroy()
 
-        elif choice == "3":
-            # Check if the video exists in the VIDEO_DIRECTORY before proceeding
-            video_name = input("Enter the name of the video to add tags (e.g., video1.mp4): ")
-            if is_video_in_directory(video_name):
-                # Proceed with adding tags
-                new_tags_input = input("Enter the tags to add, separated by commas (e.g. nature, landscape): ")
-                new_tags = [tag.strip() for tag in new_tags_input.split(",")]
-                add_tags_to_video(video_name, new_tags)
-            else:
-                print(f"Error: {video_name} not found in {VIDEO_DIRECTORY}. Please enter a valid video name.")
+    show_button = tk.Button(tags_window, text="Show Tags", command=display_tags)
+    show_button.pack(pady=10)
 
-        elif choice == "4":
-            print("Exiting...")
-            break
+def add_tags():
+    add_window = tk.Toplevel(root)
+    add_window.title("Add Tags to Video")
+    add_window.geometry("400x250")
 
-        else:
-            print("Invalid selection. Please try again.")
+    video_list = get_video_files()
+    if not video_list:
+        messagebox.showinfo("No Videos", "No videos found in the directory.")
+        add_window.destroy()
+        return
+
+    video_name_label = tk.Label(add_window, text="Select a video to add tags:")
+    video_name_label.pack(pady=5)
+
+    video_combobox = ttk.Combobox(add_window, values=video_list, width=40)
+    video_combobox.pack(pady=5)
+
+    tag_label = tk.Label(add_window, text="Enter tags to add (comma separated):")
+    tag_label.pack(pady=5)
+
+    tag_entry = tk.Entry(add_window, width=50)
+    tag_entry.pack(pady=5)
+
+    def perform_add_tags():
+        selected_video = video_combobox.get()
+        new_tags_input = tag_entry.get()
+        if selected_video and new_tags_input:
+            new_tags = [tag.strip() for tag in new_tags_input.split(",")]
+            add_tags_to_video(selected_video, new_tags)
+        add_window.destroy()
+
+    add_button = tk.Button(add_window, text="Add Tags", command=perform_add_tags)
+    add_button.pack(pady=10)
+
+def main():
+    global root
+    root = tk.Tk()
+    root.title("Video Tag Manager")
+    root.geometry("500x400")
+
+    label = tk.Label(root, text="Video Tag Manager", font=("Arial", 16))
+    label.pack(pady=20)
+
+    search_button = tk.Button(root, text="Search Video by Tag", command=search_videos, width=30)
+    search_button.pack(pady=10)
+
+    show_tags_button = tk.Button(root, text="Show Video's Tags", command=show_tags, width=30)
+    show_tags_button.pack(pady=10)
+
+    add_tags_button = tk.Button(root, text="Add Tag to Video", command=add_tags, width=30)
+    add_tags_button.pack(pady=10)
+
+    exit_button = tk.Button(root, text="Exit", command=root.quit, width=30)
+    exit_button.pack(pady=10)
+
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
