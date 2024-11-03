@@ -29,9 +29,9 @@ def get_video_files():
     return [f for f in os.listdir(VIDEO_DIRECTORY) if f.endswith((".mp4", ".avi", ".mov"))]
 
 
-def search_videos_by_tag(tag):
+def search_videos_by_tag(tags):
     database = load_database()
-    result = [video for video, tags in database.items() if tag in tags]
+    result = [video for video, video_tags in database.items() if all(tag in video_tags for tag in tags)]
     return result
 
 
@@ -107,7 +107,7 @@ def search_videos():
         user_input = tag_entry.get()
         if user_input:
             tags_to_search = [tag.strip() for tag in user_input.split(",")]
-            videos_found = get_videos_by_tags(tags_to_search)
+            videos_found = search_videos_by_tag(tags_to_search)
             if videos_found:
                 result_text = "\n".join(videos_found)
                 messagebox.showinfo("Videos Found", f"Videos with {tags_to_search}:\n{result_text}")
