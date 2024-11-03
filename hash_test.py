@@ -84,6 +84,9 @@ def add_tags_to_video(video_name, new_tags):
     save_database(database)
     messagebox.showinfo("Success", f"Tags {new_tags} added to {new_video_name}.")
 
+def remove_tag_from_database(video_name, tag):
+    database = load_database()
+
 
 def is_video_in_directory(video_name):
     return video_name in get_video_files()
